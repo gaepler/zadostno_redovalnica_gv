@@ -30,12 +30,29 @@ if (session_status() === PHP_SESSION_NONE) {
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav me-auto">
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <!-- Links for logged-in users -->
                     <li class="nav-item">
                         <a class="nav-link" href="dashboard.php">Nadzorna plošča</a>
                     </li>
+                    
+                    <?php if ($_SESSION['user_vloga'] === 'admin'): ?>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAdmin" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Upravljanje
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownAdmin">
+                            <li><a class="dropdown-item" href="admin_users.php">Uporabniki</a></li>
+                            <!-- More admin links can be added here later -->
+                        </ul>
+                    </li>
+                    <?php endif; ?>
+
+                <?php endif; ?>
+            </ul>
+            <ul class="navbar-nav ms-auto">
+                <?php if (isset($_SESSION['user_id'])): ?>
+                    <!-- Links for logged-in users -->
                     <li class="nav-item">
                         <a class="nav-link" href="profile.php">Profil</a>
                     </li>
