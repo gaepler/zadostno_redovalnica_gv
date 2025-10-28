@@ -37,6 +37,9 @@ if (session_status() === PHP_SESSION_NONE) {
                         <a class="nav-link" href="dashboard.php">Nadzorna plošča</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="profile.php">Profil</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="logout.php">Odjava</a>
                     </li>
                 <?php else: ?>
