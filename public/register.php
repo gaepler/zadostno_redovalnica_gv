@@ -14,7 +14,7 @@ $telefonska_stevilka = '';
 
 // Check if the form has been submitted by checking the request method.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Get the data from the form. Using trim() removes any extra whitespace.
+    // Get the data from the form.
     $ime = trim($_POST['ime'] ?? '');
     $priimek = trim($_POST['priimek'] ?? '');
     $email = trim($_POST['email'] ?? '');
@@ -23,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $telefonska_stevilka = trim($_POST['telefonska_stevilka'] ?? '');
 
     // --- 1. VALIDATION ---
-    // Check if the required fields are empty.
     if (empty($ime)) $errors[] = 'Ime je obvezno.';
     if (empty($priimek)) $errors[] = 'Priimek je obvezen.';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Vnesite veljaven email naslov.';
@@ -31,45 +30,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($geslo !== $potrdi_geslo) $errors[] = 'Gesli se ne ujemata.';
 
     // --- 2. DATABASE OPERATIONS ---
-    // Only proceed if there were no validation errors.
     if (empty($errors)) {
-        // Get the single database connection instance.
-        $pdo = Database::getInstance()->getConnection();
+        try {
+            $pdo = Database::getInstance()->getConnection();
 
-        // Check if a user with this email already exists to prevent duplicates.
-        $stmt = $pdo->prepare('SELECT id FROM uporabniki WHERE email = ?');
-        $stmt->execute([$email]);
-        
-        if ($stmt->fetch()) {
-            $errors[] = 'Uporabnik s tem email naslovom že obstaja.';
-        } else {
-            // The user does not exist, so we can create them.
-            // SECURITY: Never store plain-text passwords. Always hash them.
-            $geslo_hash = password_hash($geslo, PASSWORD_BCRYPT);
-
-            // Prepare the SQL INSERT statement.
-            $sql = "INSERT INTO uporabniki (ime, priimek, email, telefonska_stevilka, geslo_hash, vloga) VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt = $pdo->prepare($sql);
+            // Check if a user with this email already exists.
+            $stmt = $pdo->prepare('SELECT id FROM uporabniki WHERE email = ?');
+            $stmt->execute([$email]);
             
-            // Self-registered users are always 'student'.
-            $vloga = 'student';
-
-            // Execute the statement with the user's data.
-            if ($stmt->execute([$ime, $priimek, $email, $telefonska_stevilka, $geslo_hash, $vloga])) {
-                // Success! Store a message and redirect them to the login page.
-                $_SESSION['success_message'] = 'Registracija uspešna! Sedaj se lahko prijavite.';
-                header('Location: login.php');
-                exit(); // Always exit after a redirect.
+            if ($stmt->fetch()) {
+                $errors[] = 'Uporabnik s tem email naslovom že obstaja.';
             } else {
-                // This would happen if there was a database error.
-                $errors[] = 'Prišlo je do napake pri registraciji. Poskusite znova.';
+                // Hash the password for security.
+                $geslo_hash = password_hash($geslo, PASSWORD_BCRYPT);
+
+                // Prepare the SQL INSERT statement.
+                $sql = "INSERT INTO uporabniki (ime, priimek, email, telefonska_stevilka, geslo_hash, vloga) VALUES (?, ?, ?, ?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                
+                // Self-registered users are always 'student'.
+                $vloga = 'student';
+
+                // Execute the statement.
+                if ($stmt->execute([$ime, $priimek, $email, $telefonska_stevilka, $geslo_hash, $vloga])) {
+                    $_SESSION['success_message'] = 'Registracija uspešna! Sedaj se lahko prijavite.';
+                    header('Location: login.php');
+                    exit();
+                } else {
+                    $errors[] = 'Prišlo je do neznane napake pri registraciji.';
+                }
             }
+        } catch (PDOException $e) {
+            // *** NEW: CATCH AND DISPLAY THE SPECIFIC DATABASE ERROR ***
+            // This is the most important change for debugging.
+            // In a real application, you would log this error instead of showing it to the user.
+            $errors[] = 'Database error: ' . $e->getMessage();
         }
     }
 }
 
 // --- 3. DISPLAY THE PAGE ---
-// Include the website header.
 require_once __DIR__ . '/../templates/layouts/header.php';
 ?>
 
@@ -80,8 +80,7 @@ require_once __DIR__ . '/../templates/layouts/header.php';
                 <h3 class="text-center">Registracija</h3>
             </div>
             <div class="card-body">
-                <?php // If there are any errors, display them in an alert box.
-                if (!empty($errors)): ?>
+                <?php if (!empty($errors)): ?>
                     <div class="alert alert-danger">
                         <?php foreach ($errors as $error): ?>
                             <p class="mb-0"><?php echo htmlspecialchars($error); ?></p>
@@ -90,6 +89,7 @@ require_once __DIR__ . '/../templates/layouts/header.php';
                 <?php endif; ?>
 
                 <form action="register.php" method="POST">
+                    <!-- Form fields are unchanged -->
                     <div class="mb-3">
                         <label for="ime" class="form-label">Ime</label>
                         <input type="text" class="form-control" id="ime" name="ime" value="<?php echo htmlspecialchars($ime); ?>" required>
@@ -123,5 +123,4 @@ require_once __DIR__ . '/../templates/layouts/header.php';
     </div>
 </div>
 
-<?php // Include the website footer.
-require_once __DIR__ . '/../templates/layouts/footer.php'; ?>
+<?php require_once __DIR__ . '/../templates/layouts/footer.php'; ?>
