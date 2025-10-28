@@ -43,7 +43,7 @@ if (session_status() === PHP_SESSION_NONE) {
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownAdmin">
                             <li><a class="dropdown-item" href="admin_users.php">Uporabniki</a></li>
-                            <!-- More admin links can be added here later -->
+                            <li><a class="dropdown-item" href="admin_courses.php">Tečaji</a></li>
                         </ul>
                     </li>
                     <?php endif; ?>
