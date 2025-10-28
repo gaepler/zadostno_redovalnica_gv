@@ -1,5 +1,5 @@
 <?php
-// Start session on every page that includes the header.
+// Začetek seje na vsaki strani, ki vključuje to glavo.
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -35,6 +35,12 @@ if (session_status() === PHP_SESSION_NONE) {
                     <li class="nav-item">
                         <a class="nav-link" href="dashboard.php">Nadzorna plošča</a>
                     </li>
+
+                    <?php if ($_SESSION['user_vloga'] === 'student'): ?>
+                    <li class="nav-item">
+                        <a class="nav-link" href="courses.php">Katalog tečajev</a>
+                    </li>
+                    <?php endif; ?>
                     
                     <?php if ($_SESSION['user_vloga'] === 'admin'): ?>
                     <li class="nav-item dropdown">
@@ -52,7 +58,7 @@ if (session_status() === PHP_SESSION_NONE) {
             </ul>
             <ul class="navbar-nav ms-auto">
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <!-- Links for logged-in users -->
+                    <!-- Povezave za prijavljene uporabnike -->
                     <li class="nav-item">
                         <a class="nav-link" href="profile.php">Profil</a>
                     </li>
@@ -60,7 +66,7 @@ if (session_status() === PHP_SESSION_NONE) {
                         <a class="nav-link" href="logout.php">Odjava</a>
                     </li>
                 <?php else: ?>
-                    <!-- Links for guests -->
+                    <!-- Povezave za goste -->
                     <li class="nav-item">
                         <a class="nav-link" href="login.php">Prijava</a>
                     </li>

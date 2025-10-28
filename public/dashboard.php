@@ -1,38 +1,47 @@
 <?php
-// Start the session to access session variables.
+// Začetek seje za dostop do spremenljivk seje.
 session_start();
 
-// --- 1. PROTECT THE PAGE ---
-// Check if the user is logged in. If not, redirect them to the login page.
+// --- 1. ZAŠČITA STRANI ---
+// Preveri, če je uporabnik prijavljen. Če ni, ga preusmeri na stran za prijavo.
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-// Include the database connection.
+// Vključi povezavo z bazo podatkov.
 require_once __DIR__ . '/../src/Database.php';
+$my_courses = [];
 
-// --- 2. GET USER INFORMATION ---
-// Fetch the user's details from the database to display a personalized welcome message.
+// --- 2. PRIDOBIVANJE PODATKOV O UPORABNIKU ---
 try {
     $pdo = Database::getInstance()->getConnection();
     $stmt = $pdo->prepare('SELECT ime, priimek, vloga FROM uporabniki WHERE id = ?');
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
+
+    // Če je uporabnik študent, pridobi njegove vpisane tečaje
+    if ($user && $user['vloga'] === 'student') {
+        $sql = "SELECT t.id, t.naziv FROM tecaji t JOIN vpisi v ON t.id = v.id_tecaja WHERE v.id_studenta = ?";
+        $stmt_courses = $pdo->prepare($sql);
+        $stmt_courses->execute([$_SESSION['user_id']]);
+        $my_courses = $stmt_courses->fetchAll();
+    }
+
 } catch (PDOException $e) {
-    // If there's a database error, it's best to end the session and redirect.
+    // V primeru napake v bazi je najbolje prekiniti sejo in preusmeriti.
     error_log('Dashboard error: ' . $e->getMessage());
     header('Location: logout.php');
     exit();
 }
 
-// If the user was not found in the database (e.g., deleted), log them out.
+// Če uporabnik ni bil najden v bazi (npr. izbrisan), ga odjavi.
 if (!$user) {
     header('Location: logout.php');
     exit();
 }
 
-// --- 3. DISPLAY THE PAGE ---
+// --- 3. PRIKAZ STRANI ---
 require_once __DIR__ . '/../templates/layouts/header.php';
 ?>
 
@@ -50,16 +59,25 @@ require_once __DIR__ . '/../templates/layouts/header.php';
         <div class="col-md-12">
             <h2>Nadzorna plošča</h2>
             
-            <?php // --- 4. ROLE-SPECIFIC CONTENT --- ?>
+            <?php // --- 4. VSEBINA GLEDE NA VLOGO --- ?>
             <?php if ($user['vloga'] === 'admin'): ?>
                 <p>Tukaj boste lahko upravljali uporabnike in tečaje.</p>
-                <!-- Admin links will go here -->
+                <!-- Povezave za admina so v glavi -->
             <?php elseif ($user['vloga'] === 'teacher'): ?>
                 <p>Tukaj boste lahko upravljali svoje tečaje, gradiva in naloge.</p>
-                <!-- Teacher links will go here -->
+                <!-- Povezave za učitelja bodo dodane kasneje -->
             <?php elseif ($user['vloga'] === 'student'): ?>
-                <p>Tukaj boste videli pregled svojih tečajev, ocen in prihajajočih nalog.</p>
-                <!-- Student links will go here -->
+                <h4>Moji tečaji</h4>
+                <?php if (!empty($my_courses)): ?>
+                    <ul class="list-group mb-4">
+                        <?php foreach ($my_courses as $course): ?>
+                            <li class="list-group-item"><?php echo htmlspecialchars($course['naziv']); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php else: ?>
+                    <p>Niste vpisani v noben tečaj.</p>
+                <?php endif; ?>
+                <a href="courses.php" class="btn btn-primary">Prikaži vse tečaje</a>
             <?php endif; ?>
         </div>
     </div>
