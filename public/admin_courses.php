@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-// --- 1. ADMIN ACCESS CONTROL ---
+// --- 1. KONTROLA DOSTOPA ZA ADMINA ---
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_vloga']) || $_SESSION['user_vloga'] !== 'admin') {
     $_SESSION['error_message'] = 'Nimate dovoljenja za dostop do te strani.';
     header('Location: dashboard.php');
@@ -12,14 +12,14 @@ require_once __DIR__ . '/../src/Database.php';
 
 $errors = [];
 $success_message = '';
-$edit_course = null; // Variable to hold course data when editing
+$edit_course = null; // Spremenljivka za shranjevanje podatkov o tečaju pri urejanju
 
 try {
     $pdo = Database::getInstance()->getConnection();
 
-    // --- 2. HANDLE ACTIONS (DELETE, CREATE, UPDATE) ---
+    // --- 2. OBDELAVA AKCIJ (BRISANJE, USTVARJANJE, POSODABLJANJE) ---
 
-    // Handle DELETE action
+    // Obdelava akcije BRISANJA
     if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
         $course_id_to_delete = $_GET['id'];
         $sql = "DELETE FROM tecaji WHERE id = ?";
@@ -31,11 +31,11 @@ try {
         }
     }
 
-    // Handle CREATE and UPDATE actions
+    // Obdelava akcij USTVARJANJA in POSODABLJANJA
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $naziv = trim($_POST['naziv'] ?? '');
         $opis = trim($_POST['opis'] ?? '');
-        $course_id = $_POST['course_id'] ?? null; // Hidden field for updates
+        $course_id = $_POST['course_id'] ?? null; // Skrito polje za posodobitve
 
         if (empty($naziv)) {
             $errors[] = 'Naziv tečaja je obvezen.';
@@ -43,7 +43,7 @@ try {
 
         if (empty($errors)) {
             if ($course_id) {
-                // UPDATE existing course
+                // POSODOBI obstoječi tečaj
                 $sql = "UPDATE tecaji SET naziv = ?, opis = ? WHERE id = ?";
                 $stmt = $pdo->prepare($sql);
                 if ($stmt->execute([$naziv, $opis, $course_id])) {
@@ -52,7 +52,7 @@ try {
                     $errors[] = 'Napaka pri posodabljanju tečaja.';
                 }
             } else {
-                // CREATE new course
+                // USTVARI nov tečaj
                 $sql = "INSERT INTO tecaji (naziv, opis) VALUES (?, ?)";
                 $stmt = $pdo->prepare($sql);
                 if ($stmt->execute([$naziv, $opis])) {
@@ -64,9 +64,9 @@ try {
         }
     }
 
-    // --- 3. PREPARE FOR DISPLAY ---
+    // --- 3. PRIPRAVA ZA PRIKAZ ---
 
-    // Handle EDIT action (fetch data to pre-fill the form)
+    // Obdelava akcije UREJANJA (pridobi podatke za predizpolnitev obrazca)
     if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
         $course_id_to_edit = $_GET['id'];
         $stmt = $pdo->prepare('SELECT * FROM tecaji WHERE id = ?');
@@ -74,11 +74,11 @@ try {
         $edit_course = $stmt->fetch();
     }
 
-    // Fetch all courses to display in the list
+    // Pridobi vse tečaje za prikaz v seznamu
     $courses = $pdo->query('SELECT * FROM tecaji ORDER BY naziv')->fetchAll();
 
 } catch (PDOException $e) {
-    die('Database error: ' . $e->getMessage());
+    die('Napaka v bazi podatkov: ' . $e->getMessage());
 }
 
 require_once __DIR__ . '/../templates/layouts/header.php';
@@ -87,7 +87,7 @@ require_once __DIR__ . '/../templates/layouts/header.php';
 <div class="container">
     <h1 class="mb-4">Upravljanje tečajev</h1>
 
-    <!-- Form for adding or editing a course -->
+    <!-- Obrazec za dodajanje ali urejanje tečaja -->
     <div class="card mb-4">
         <div class="card-header">
             <h3><?php echo $edit_course ? 'Uredi tečaj' : 'Dodaj nov tečaj'; ?></h3>
@@ -105,7 +105,7 @@ require_once __DIR__ . '/../templates/layouts/header.php';
             <?php endif; ?>
 
             <form action="admin_courses.php" method="POST">
-                <!-- Hidden field to pass the ID during an update -->
+                <!-- Skrito polje za ID pri posodabljanju -->
                 <input type="hidden" name="course_id" value="<?php echo htmlspecialchars($edit_course['id'] ?? ''); ?>">
                 
                 <div class="mb-3">
@@ -125,7 +125,7 @@ require_once __DIR__ . '/../templates/layouts/header.php';
         </div>
     </div>
 
-    <!-- Table of existing courses -->
+    <!-- Tabela obstoječih tečajev -->
     <div class="card">
         <div class="card-header">
             <h3>Obstoječi tečaji</h3>
@@ -147,6 +147,8 @@ require_once __DIR__ . '/../templates/layouts/header.php';
                             <td><?php echo htmlspecialchars($course['naziv']); ?></td>
                             <td><?php echo htmlspecialchars($course['opis']); ?></td>
                             <td>
+                                <!-- DODAN NOV GUMB -->
+                                <a href="admin_manage_course.php?id=<?php echo $course['id']; ?>" class="btn btn-sm btn-info">Upravljaj</a>
                                 <a href="admin_courses.php?action=edit&id=<?php echo $course['id']; ?>" class="btn btn-sm btn-secondary">Uredi</a>
                                 <a href="admin_courses.php?action=delete&id=<?php echo $course['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('Ste prepričani, da želite izbrisati ta tečaj? Vsi povezani podatki bodo trajno odstranjeni!');">Izbriši</a>
                             </td>
