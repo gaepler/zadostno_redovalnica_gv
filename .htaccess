@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Preusmeri vse zahteve, ki niso za obstoječe datoteke ali mape v public/, na public/index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ public/index.php [L,QSA]
+
+    # Preusmeri korensko pot na public/
+    RewriteRule ^$ public/ [L]
+</IfModule>
