@@ -3,7 +3,6 @@
 session_start();
 
 // --- 1. ZAŠČITA STRANI ---
-// Preveri, če je uporabnik prijavljen. Če ni, ga preusmeri na stran za prijavo.
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
@@ -11,7 +10,8 @@ if (!isset($_SESSION['user_id'])) {
 
 // Vključi povezavo z bazo podatkov.
 require_once __DIR__ . '/../src/Database.php';
-$my_courses = [];
+
+$my_courses = []; // Inicializacija polja za tečaje
 
 // --- 2. PRIDOBIVANJE PODATKOV O UPORABNIKU ---
 try {
@@ -20,32 +20,39 @@ try {
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
 
-    // Če je uporabnik študent, pridobi njegove vpisane tečaje
-    if ($user && $user['vloga'] === 'student') {
-        $sql = "SELECT t.id, t.naziv FROM tecaji t JOIN vpisi v ON t.id = v.id_tecaja WHERE v.id_studenta = ?";
-        $stmt_courses = $pdo->prepare($sql);
-        $stmt_courses->execute([$_SESSION['user_id']]);
-        $my_courses = $stmt_courses->fetchAll();
+    if ($user) {
+        // Glede na vlogo uporabnika pridobi relevantne tečaje
+        if ($user['vloga'] === 'student') {
+            $sql = "SELECT t.id, t.naziv FROM tecaji t JOIN vpisi v ON t.id = v.id_tecaja WHERE v.id_studenta = ? ORDER BY t.naziv";
+            $stmt_courses = $pdo->prepare($sql);
+            $stmt_courses->execute([$_SESSION['user_id']]);
+            $my_courses = $stmt_courses->fetchAll();
+        } elseif ($user['vloga'] === 'teacher') {
+            $sql = "SELECT t.id, t.naziv FROM tecaji t JOIN ucitelji_tecajev ut ON t.id = ut.id_tecaja WHERE ut.id_ucitelja = ? ORDER BY t.naziv";
+            $stmt_courses = $pdo->prepare($sql);
+            $stmt_courses->execute([$_SESSION['user_id']]);
+            $my_courses = $stmt_courses->fetchAll();
+        }
+    } else {
+        // Če uporabnik ne obstaja, ga odjavi
+        header('Location: logout.php');
+        exit();
     }
 
 } catch (PDOException $e) {
-    // V primeru napake v bazi je najbolje prekiniti sejo in preusmeriti.
     error_log('Dashboard error: ' . $e->getMessage());
     header('Location: logout.php');
     exit();
 }
 
-// Če uporabnik ni bil najden v bazi (npr. izbrisan), ga odjavi.
-if (!$user) {
-    header('Location: logout.php');
-    exit();
-}
-
-// --- 3. PRIKAZ STRANI ---
 require_once __DIR__ . '/../templates/layouts/header.php';
 ?>
 
 <div class="container">
+    <?php if (isset($_SESSION['error_message'])): ?>
+        <div class="alert alert-danger"><?php echo $_SESSION['error_message']; unset($_SESSION['error_message']); ?></div>
+    <?php endif; ?>
+
     <div class="p-5 mb-4 bg-light rounded-3">
         <div class="container-fluid py-5">
             <h1 class="display-5 fw-bold">Pozdravljeni, <?php echo htmlspecialchars($user['ime']); ?>!</h1>
@@ -59,21 +66,34 @@ require_once __DIR__ . '/../templates/layouts/header.php';
         <div class="col-md-12">
             <h2>Nadzorna plošča</h2>
             
-            <?php // --- 4. VSEBINA GLEDE NA VLOGO --- ?>
+            <?php // --- VSEBINA GLEDE NA VLOGO --- ?>
             <?php if ($user['vloga'] === 'admin'): ?>
-                <p>Tukaj boste lahko upravljali uporabnike in tečaje.</p>
-                <!-- Povezave za admina so v glavi -->
+                <p>Izberite eno od možnosti v meniju za upravljanje.</p>
+            
             <?php elseif ($user['vloga'] === 'teacher'): ?>
-                <p>Tukaj boste lahko upravljali svoje tečaje, gradiva in naloge.</p>
-                <!-- Povezave za učitelja bodo dodane kasneje -->
+                <h4>Moji tečaji</h4>
+                <?php if (!empty($my_courses)): ?>
+                    <div class="list-group">
+                        <?php foreach ($my_courses as $course): ?>
+                            <a href="course.php?id=<?php echo $course['id']; ?>" class="list-group-item list-group-item-action">
+                                <?php echo htmlspecialchars($course['naziv']); ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <p>Niste dodeljeni nobenemu tečaju.</p>
+                <?php endif; ?>
+
             <?php elseif ($user['vloga'] === 'student'): ?>
                 <h4>Moji tečaji</h4>
                 <?php if (!empty($my_courses)): ?>
-                    <ul class="list-group mb-4">
+                    <div class="list-group mb-4">
                         <?php foreach ($my_courses as $course): ?>
-                            <li class="list-group-item"><?php echo htmlspecialchars($course['naziv']); ?></li>
+                            <a href="course.php?id=<?php echo $course['id']; ?>" class="list-group-item list-group-item-action">
+                                <?php echo htmlspecialchars($course['naziv']); ?>
+                            </a>
                         <?php endforeach; ?>
-                    </ul>
+                    </div>
                 <?php else: ?>
                     <p>Niste vpisani v noben tečaj.</p>
                 <?php endif; ?>
