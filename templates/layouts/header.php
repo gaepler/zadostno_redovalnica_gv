@@ -8,7 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 <html lang="sl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>Zadostno</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -39,6 +39,9 @@ if (session_status() === PHP_SESSION_NONE) {
                     <?php if ($_SESSION['user_vloga'] === 'student'): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="courses.php">Katalog tečajev</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="my_grades.php">Moje ocene</a>
                     </li>
                     <?php endif; ?>
                     
